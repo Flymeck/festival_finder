@@ -1,6 +1,5 @@
 #include "lora.h"
-
-#include <LoRa.h>
+#include <LoRa_E220.h>
 
 #define ss 32
 #define rst 12
@@ -9,37 +8,36 @@
 
 Location parseLocation(String loc);
 String locationToString(Location location);
+LoRa_E220 e220ttl(&Serial2, 5, 19, 18);
 
 void Lora::init() {
-  LoRa.setPins(ss, rst, dio0);
-  while (!LoRa.begin(433E6)) {
-    Serial.println(".");
-    delay(500);
-  }
-  LoRa.setSyncWord(0xA5);
-  Serial.println("LoRa Initializing OK!");
+  e220ttl.begin();
+  ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(18, "init Radio");
+  Serial.println(rs.getResponseDescription());
+}
+
+Location getEmptyLocationLora() {
+  Location location;
+  location.lat = 0;
+  location.lon = 0;
+  return location;
 }
 
 unsigned long loraReadStart = 0;
 Location Lora::read() {
-  int packetSize = LoRa.parsePacket();  // try to parse packet
-  loraReadStart = millis();
-  String loRaData;
-  if (packetSize) {
-    Serial.println("Start reading");
-    Serial.print("Received packet '");
-    while (LoRa.available()) {
-      if (millis() - loraReadStart > 200) {
-        Serial.println("Timeout");
-        break;
-      }
-      loRaData += LoRa.readString();
-      Serial.println(loRaData);
+  if (e220ttl.available()>1) {
+    // read the String message
+    ResponseContainer rc = e220ttl.receiveMessage();
+    // Is something goes wrong print error
+    if (rc.status.code!=1){
+      Serial.println(rc.status.getResponseDescription());
+    }else{
+      // Print the data received
+      Serial.println(rc.data);
+      return parseLocation(rc.data);
     }
-    Serial.print("' with RSSI ");  // print RSSI of packet
-    Serial.println(LoRa.packetRssi());
   }
-  return parseLocation(loRaData);
+  return getEmptyLocationLora();
 }
 
 Location parseLocation(String loc) {
@@ -60,9 +58,7 @@ String locationToString(Location location) {
 
 void Lora::send(Location location) {
   String locString = locationToString(location);
-  LoRa.beginPacket();
-  LoRa.print(locString);
-  LoRa.endPacket();
-  Serial.print("Sending packet ");
-  Serial.println(locString);
+  ResponseStatus rs = e220ttl.sendBroadcastFixedMessage(18, locationToString(location));
+  Serial.print("Sending packet");
+  Serial.println(rs.getResponseDescription());
 }

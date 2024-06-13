@@ -1,10 +1,15 @@
 #include "gps.h"
+#include <TinyGPSPlus.h>
 
 #include <Arduino.h>
 
-const float EARH_RADIUS = 6371.0;
+#define RXD1 2
+#define TXD1 4
 
-void GPS::displayInfo() {
+const float EARH_RADIUS = 6371.0;
+TinyGPSPlus gps;
+
+void GPS_class::displayInfo() {
   Serial.println(F("Location: "));
   if (gps.location.isValid()) {
     Serial.print(gps.location.lat(), 6);
@@ -25,7 +30,7 @@ void GPS::displayInfo() {
 }
 double degreesToRadians(double degrees) { return degrees * M_PI / 180.0; }
 
-int GPS::distance(float lat, float lon) {
+int GPS_class::distance(float lat, float lon) {
   float lat1 = gps.location.lat();
   float lon1 = gps.location.lng();
   float lat2 = lat;
@@ -33,7 +38,7 @@ int GPS::distance(float lat, float lon) {
   return calculateDistance(lat1, lon1, lat2, lon2);
 }
 
-int GPS::calculateDistance(float lat1, float lon1, float lat2, float lon2) {
+int GPS_class::calculateDistance(float lat1, float lon1, float lat2, float lon2) {
   lat1 = degreesToRadians(lat1);
   lon1 = degreesToRadians(lon1);
   lat2 = degreesToRadians(lat2);
@@ -52,7 +57,7 @@ int GPS::calculateDistance(float lat1, float lon1, float lat2, float lon2) {
   return distance;
 }
 
-int GPS::calculateAngle(float lat1, float lon1, float lat2, float lon2) {
+int GPS_class::calculateAngle(float lat1, float lon1, float lat2, float lon2) {
   lat1 = degreesToRadians(lat1);
   lon1 = degreesToRadians(lon1);
   lat2 = degreesToRadians(lat2);
@@ -88,9 +93,11 @@ Location getEmptyLocation() {
   return location;
 }
 
-Location GPS::getLocation() {
-  while (Serial2.available() > 0) {
-    if (gps.encode(Serial2.read())) {
+Location GPS_class::getLocation() {
+  while (Serial1.available() > 0) {
+     Serial.println("test 1");
+    if (gps.encode(Serial1.read())) {
+      Serial.println("test 2");
       displayInfo();
       if (gps.location.isValid()) {
         Location location;
@@ -105,20 +112,20 @@ Location GPS::getLocation() {
   return getEmptyLocation();
 }
 
-void GPS::init() {
-  Serial2.begin(9600);
+void GPS_class::init() {
+  Serial1.begin(9600,SERIAL_8N1,RXD1,TXD1);
   Serial.println(F("GPS module is ready"));
 }
 
-void GPS::updateSerial() {
+void GPS_class::updateSerial() {
   delay(500);
   while (Serial.available()) {
-    Serial2.write(
+    Serial1.write(
         Serial.read());  // Forward what Serial received to Software Serial Port
   }
-  while (Serial2.available()) {
+  while (Serial1.available()) {
     Serial.write(
-        Serial2
+        Serial1
             .read());  // Forward what Software Serial received to Serial Port
   }
 }

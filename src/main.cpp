@@ -9,7 +9,7 @@
 #include "orientation/orientation.h"
 
 Orientation orientation;
-GPS gps;
+GPS_class gps_object;
 Display display;
 Lora lora;
 int distance = -1;
@@ -18,16 +18,21 @@ Location friendLocation;
 
 void setup() {
   Serial.begin(9600);
-  gps.init();
+  Serial.println("startup in progress...");
+  gps_object.init();
+  delay(100);
   orientation.init(3, 32);
+  delay(100);
 
   // set values before in header of tft e spi
   display.init();
+  delay(100);
 
   // delay(3000);
   // orientation.calibrate();
 
   lora.init();
+  delay(100);
 }
 
 unsigned long prevMillis = 0;
@@ -51,7 +56,7 @@ void loop() {
     if (lastKnownPosition.distance != 0 && friendLocation.lat != 0 &&
         friendLocation.lon != 0) {
       int angleToPoint =
-          north + gps.calculateAngle(friendLocation.lat, friendLocation.lon,
+          north + gps_object.calculateAngle(friendLocation.lat, friendLocation.lon,
                                      lastKnownPosition.lat,
                                      lastKnownPosition.lon);
       angleToPoint = angleToPoint % 360;
@@ -64,10 +69,10 @@ void loop() {
   }
   if (millis() - prevMillis > interval) {
     // for debugging
-    // gps.updateSerial();
+    gps_object.updateSerial();
     prevMillis = millis();
     // skip for now
-    Location location = gps.getLocation();
+    Location location = gps_object.getLocation();
     if (location.lat != 0 && location.lon != 0) {
       lastKnownPosition = location;
     }
@@ -83,7 +88,7 @@ void loop() {
     if (location.lat != 0 && location.lon != 0 && friendLocation.lat != 0 &&
         friendLocation.lon != 0) {
       Serial.print("Calculating distance: ");
-      distance = gps.calculateDistance(friendLocation.lat, friendLocation.lon,
+      distance = gps_object.calculateDistance(friendLocation.lat, friendLocation.lon,
                                        location.lat, location.lon);
       location.distance = distance;
       Serial.println(distance);

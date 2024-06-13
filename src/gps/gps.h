@@ -10,7 +10,7 @@ class Location {
   int distance;
 };
 
-class GPS {
+class GPS_class {
  public:
   void init();
   void displayInfo();

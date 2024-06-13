@@ -1,12 +1,31 @@
 #include "orientation.h"
 
-#include <QMC5883LCompass.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_LSM303DLH_Mag.h>
 
 #include "math.h"
 
-QMC5883LCompass compass;
+Adafruit_LSM303DLH_Mag_Unified mag = Adafruit_LSM303DLH_Mag_Unified(12345);
+float MagMinX, MagMaxX;
+float MagMinY, MagMaxY;
+float MagMinZ, MagMaxZ;
+
+long lastDisplayTime;
 
 void Orientation::init(int degrees, int minutes) {
+  
+  Serial.println("LSM303 Calibration");
+  Serial.println("");
+
+  /* Initialise the magnetometer */
+  if (!mag.begin()) {
+    /* There was a problem detecting the LSM303 ... check your connections */
+    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+    while (1)
+      ;
+  }
+  lastDisplayTime = millis();
+
   _magneticDeclinationDegrees = degrees + minutes / 60;
   // compass.setCalibrationOffsets(1317.00, -192.00, 2612.00);
   // compass.setCalibrationScales(1.34, 1.29, 0.68);
@@ -15,26 +34,46 @@ void Orientation::init(int degrees, int minutes) {
 
 
 // cased one 
-  compass.setCalibrationOffsets(202.00, 263.00, -433.00);
-compass.setCalibrationScales(1.06, 0.95, 0.99);
+  ////compass.setCalibrationOffsets(202.00, 263.00, -433.00);
+  ////compass.setCalibrationScales(1.06, 0.95, 0.99);
   // https://www.magnetic-declination.com/
   // compass.setMagneticDeclination(3, 32);
-  compass.init();
+  ////compass.init();
 }
 
 int Orientation::getAzimuth() {
-  compass.read();
+  /*compass.read();
   int x = compass.getX();
   int y = compass.getY();
 
   float heading = atan2(x, y) * 180.0 / M_PI;
   heading += _magneticDeclinationDegrees;
+  return (int)heading % 360;*/
+
+  sensors_event_t event;
+  mag.getEvent(&event);
+
+  float Pi = 3.14159;
+
+  // Calculate the angle of the vector y,x
+  float heading = (atan2(event.magnetic.y, event.magnetic.x) * 180) / Pi;
+  heading += _magneticDeclinationDegrees;
+  
+  //Normalize to 0-360
+  if (heading < 0) {
+    heading = 360 + heading;
+  }
+
+  //Serial.print("Compass Heading: ");
+  //Serial.println(heading);
+
   return (int)heading % 360;
+
 };
 
-void Orientation::read() { compass.read(); }
+//void Orientation::read() { compass.read(); }
 
-void Orientation::calibrate() {
+/*void Orientation::calibrate() {
   Serial.begin(9600);
   compass.init();
 
@@ -65,4 +104,4 @@ void Orientation::calibrate() {
   Serial.print(", ");
   Serial.print(compass.getCalibrationScale(2));
   Serial.println(");");
-}
+}*/
